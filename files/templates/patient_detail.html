@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }}{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">
+      <i class="bi bi-person-badge-fill me-2" style="color:var(--primary)"></i>{{ patient.name }}
+    </h1>
+    <div class="page-subtitle">
+      <span class="sn-badge">{{ patient.serial_number }}</span> &nbsp;
+      <span style="color:var(--muted);">{{ patient.registration_number }}</span>
+      &nbsp;·&nbsp; Registered {{ patient.created_at.strftime('%d %B %Y') if patient.created_at else '' }}
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary btn-action">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+    <a href="{{ url_for('add_visit', patient_id=patient.id) }}" class="btn btn-outline-success btn-action">
+      <i class="bi bi-clipboard2-pulse-fill"></i> Add Visit
+    </a>
+    <a href="{{ url_for('add_bill', patient_id=patient.id) }}" class="btn btn-outline-secondary btn-action">
+      <i class="bi bi-receipt"></i> Create Bill
+    </a>
+    <a href="{{ url_for('edit_patient', patient_id=patient.id) }}" class="btn btn-outline-primary btn-action">
+      <i class="bi bi-pencil-fill"></i> Edit
+    </a>
+    <a href="{{ url_for('prescription_pdf', patient_id=patient.id) }}" target="_blank"
+       class="btn btn-primary btn-action">
+      <i class="bi bi-file-earmark-medical-fill"></i> Print Rx
+    </a>
+    <!-- WhatsApp Reminder Button -->
+    <button class="btn btn-action" onclick="confirmWhatsApp()"
+            style="background:#25D366;color:white;border:none;">
+      <i class="bi bi-whatsapp"></i> Send Reminder
+    </button>
+    <button class="btn btn-outline-danger btn-action" onclick="confirmDelete()">
+      <i class="bi bi-trash-fill"></i> Delete
+    </button>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Left: Personal + Vitals -->
+  <div class="col-lg-5">
+
+    <!-- Personal Info Card -->
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center gap-2">
+        <div style="width:32px;height:32px;background:var(--primary-light);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--primary);">
+          <i class="bi bi-person-fill"></i>
+        </div>
+        <h5>Personal Information</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-0">
+          <div class="col-6">
+            <div class="detail-field">
+              <div class="field-label">Serial Number</div>
+              <div class="field-value"><span class="sn-badge">{{ patient.serial_number }}</span></div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="detail-field">
+              <div class="field-label">Reg. Number</div>
+              <div class="field-value" style="font-family:monospace;font-size:0.88rem;">{{ patient.registration_number }}</div>
+            </div>
+          </div>
+          <div class="col-8">
+            <div class="detail-field">
+              <div class="field-label">Full Name</div>
+              <div class="field-value" style="font-size:1.05rem;font-weight:700;">{{ patient.name }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="detail-field">
+              <div class="field-label">Sex</div>
+              <div class="field-value">
+                <span class="badge-sex badge-{{ patient.sex|lower }}">{{ patient.sex }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="detail-field">
+              <div class="field-label">Age</div>
+              <div class="field-value">{{ patient.age }} years</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="detail-field">
+              <div class="field-label">Code</div>
+              <div class="field-value {% if not patient.code %}empty{% endif %}">{{ patient.code or 'None' }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="detail-field">
+              <div class="field-label">Mobile</div>
+              <div class="field-value" style="font-family:monospace;">{{ patient.mobile }}</div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="detail-field">
+              <div class="field-label">Address</div>
+              <div class="field-value {% if not patient.address %}empty{% endif %}">{{ patient.address or 'Not provided' }}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="detail-field">
+              <div class="field-label">Registered On</div>
+              <div class="field-value" style="font-size:0.85rem;">
+                {{ patient.created_at.strftime('%d %b %Y, %I:%M %p') if patient.created_at else '—' }}
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="detail-field">
+              <div class="field-label">Last Updated</div>
+              <div class="field-value" style="font-size:0.85rem;">
+                {{ patient.updated_at.strftime('%d %b %Y, %I:%M %p') if patient.updated_at else '—' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Card -->
+    <div class="card mb-3">
+      <div class="card-body d-flex gap-3">
+        <div style="flex:1;background:var(--accent-light);border-radius:12px;padding:1rem;text-align:center;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;">Total Visits</div>
+          <div style="font-size:2rem;font-weight:700;color:var(--accent);">{{ visits|length }}</div>
+        </div>
+        <div style="flex:1;background:var(--primary-light);border-radius:12px;padding:1rem;text-align:center;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;">Total Billed</div>
+          <div style="font-size:1.5rem;font-weight:700;color:var(--primary);">₹{{ "%.0f"|format(total_billed) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Billing History -->
+    {% if bills %}
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h5><i class="bi bi-receipt me-2" style="color:var(--primary)"></i>Billing History</h5>
+        <a href="{{ url_for('add_bill', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary btn-action">
+          <i class="bi bi-plus"></i> New Bill
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Consult</th>
+              <th>Medicine</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in bills %}
+            <tr>
+              <td style="font-size:0.82rem;color:var(--muted);">{{ b.created_at.strftime('%d %b %Y') }}</td>
+              <td style="font-size:0.85rem;">₹{{ "%.0f"|format(b.consultation_fee) }}</td>
+              <td style="font-size:0.85rem;">₹{{ "%.0f"|format(b.medicine_cost) }}</td>
+              <td style="font-weight:700;color:var(--primary);">₹{{ "%.2f"|format(b.total) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Right: Visit History -->
+  <div class="col-lg-7">
+
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h5><i class="bi bi-clipboard2-pulse-fill me-2" style="color:var(--primary)"></i>Visit History</h5>
+        <a href="{{ url_for('add_visit', patient_id=patient.id) }}" class="btn btn-sm btn-primary btn-action">
+          <i class="bi bi-plus-circle-fill"></i> Add Visit
+        </a>
+      </div>
+
+      {% if visits %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Complaint</th>
+              <th>Diagnosis</th>
+              <th>Rx</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in visits %}
+            <tr>
+              <td style="white-space:nowrap;font-size:0.83rem;color:var(--muted);">
+                {{ v.visit_date.strftime('%d %b %Y') }}
+              </td>
+              <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.85rem;">
+                {{ v.complaint or '—' }}
+              </td>
+              <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.85rem;color:var(--muted);">
+                {{ v.diagnosis or '—' }}
+              </td>
+              <td>
+                <span style="font-size:0.75rem;font-weight:700;color:var(--accent);background:var(--accent-light);padding:2px 8px;border-radius:10px;">
+                  {{ v.prescriptions|length }} med{{ 's' if v.prescriptions|length != 1 else '' }}
+                </span>
+              </td>
+              <td style="text-align:right;white-space:nowrap;">
+                <a href="{{ url_for('visit_detail', visit_id=v.id) }}" class="btn btn-sm btn-outline-primary btn-action me-1">
+                  <i class="bi bi-eye-fill"></i>
+                </a>
+                <a href="{{ url_for('visit_prescription_pdf', visit_id=v.id) }}" target="_blank"
+                   class="btn btn-sm btn-outline-secondary btn-action me-1" title="Print Rx">
+                  <i class="bi bi-file-earmark-medical-fill"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-danger btn-action"
+                        onclick="confirmDeleteVisit({{ v.id }})">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:2rem;">
+        <i class="bi bi-clipboard2"></i>
+        <p>No visits recorded yet. <a href="{{ url_for('add_visit', patient_id=patient.id) }}">Record first visit</a>.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Legacy fields shown only if no visits -->
+    {% if not visits %}
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center gap-2">
+        <div style="width:32px;height:32px;background:#fef3e8;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#d4a017;">
+          <i class="bi bi-chat-left-text-fill"></i>
+        </div>
+        <h5>Chief Complaint</h5>
+      </div>
+      <div class="card-body">
+        {% if patient.complaint %}
+        <p style="font-size:0.95rem;color:var(--text);line-height:1.7;margin:0;">{{ patient.complaint }}</p>
+        {% else %}
+        <p style="color:var(--muted);font-style:italic;margin:0;">No complaint recorded. Use "Add Visit" to track visits.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-body d-flex align-items-center gap-2 flex-wrap" style="padding:1rem 1.25rem;">
+        <span style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Actions</span>
+        <a href="{{ url_for('add_visit', patient_id=patient.id) }}" class="btn btn-sm btn-outline-success btn-action">
+          <i class="bi bi-clipboard2-pulse-fill"></i> Add Visit
+        </a>
+        <a href="{{ url_for('edit_patient', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary btn-action">
+          <i class="bi bi-pencil-fill"></i> Edit Record
+        </a>
+        <a href="{{ url_for('prescription_pdf', patient_id=patient.id) }}" target="_blank"
+           class="btn btn-sm btn-primary btn-action">
+          <i class="bi bi-printer-fill"></i> Print Prescription
+        </a>
+        <a href="{{ url_for('add_bill', patient_id=patient.id) }}" class="btn btn-sm btn-outline-secondary btn-action">
+          <i class="bi bi-receipt"></i> Create Bill
+        </a>
+        <button class="btn btn-sm btn-action ms-auto" onclick="confirmWhatsApp()"
+                style="background:#25D366;color:white;border:none;">
+          <i class="bi bi-whatsapp"></i> WhatsApp Reminder
+        </button>
+        <button class="btn btn-sm btn-outline-danger btn-action" onclick="confirmDelete()">
+          <i class="bi bi-trash-fill"></i> Delete Patient
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WhatsApp Reminder Modal -->
+<div class="modal fade" id="whatsappModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+      <div class="modal-body text-center p-4">
+        <div style="width:56px;height:56px;background:#e8f8ef;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.6rem;color:#25D366;">
+          <i class="bi bi-whatsapp"></i>
+        </div>
+        <h5 style="font-weight:700;margin-bottom:.4rem;">Send WhatsApp Reminder?</h5>
+        <p style="font-size:0.87rem;color:var(--muted);">
+          A reminder message will be sent to <strong>{{ patient.name }}</strong>
+          on <strong>{{ patient.mobile }}</strong> via WhatsApp.
+        </p>
+        <div class="d-flex gap-2 justify-content-center mt-3">
+          <button class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+          <form method="POST" action="{{ url_for('send_manual_reminder', patient_id=patient.id) }}">
+            <button type="submit" class="btn btn-action px-4" style="background:#25D366;color:white;border:none;">
+              <i class="bi bi-whatsapp me-1"></i> Send Now
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Patient Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+      <div class="modal-body text-center p-4">
+        <div style="width:56px;height:56px;background:#fef0ef;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.4rem;color:#c0392b;">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <h5 style="font-weight:700;margin-bottom:.4rem;">Delete Patient Record?</h5>
+        <p style="font-size:0.87rem;color:var(--muted);">
+          This will permanently delete all records for <strong>{{ patient.name }}</strong>,
+          including all visits and prescriptions. This action cannot be undone.
+        </p>
+        <div class="d-flex gap-2 justify-content-center mt-3">
+          <button class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+          <form method="POST" action="{{ url_for('delete_patient', patient_id=patient.id) }}">
+            <button type="submit" class="btn btn-danger px-4">
+              <i class="bi bi-trash-fill me-1"></i> Delete
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Visit Modal -->
+<div class="modal fade" id="deleteVisitModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+      <div class="modal-body text-center p-4">
+        <div style="width:56px;height:56px;background:#fef0ef;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.4rem;color:#c0392b;">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <h5 style="font-weight:700;margin-bottom:.4rem;">Delete Visit?</h5>
+        <p style="font-size:0.87rem;color:var(--muted);">All prescriptions linked to this visit will also be deleted.</p>
+        <div class="d-flex gap-2 justify-content-center mt-3">
+          <button class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+          <form id="deleteVisitForm" method="POST">
+            <button type="submit" class="btn btn-danger px-4">
+              <i class="bi bi-trash-fill me-1"></i> Delete
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function confirmDelete() {
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+  }
+  function confirmDeleteVisit(visitId) {
+    document.getElementById('deleteVisitForm').action = '/visits/' + visitId + '/delete';
+    new bootstrap.Modal(document.getElementById('deleteVisitModal')).show();
+  }
+  function confirmWhatsApp() {
+    new bootstrap.Modal(document.getElementById('whatsappModal')).show();
+  }
+</script>
+{% endblock %}

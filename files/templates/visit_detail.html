@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% block title %}Visit — {{ patient.name }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">
+      <i class="bi bi-clipboard2-pulse-fill me-2" style="color:var(--primary)"></i>Visit Record
+    </h1>
+    <div class="page-subtitle">
+      {{ patient.name }} &nbsp;·&nbsp; {{ patient.registration_number }}
+      &nbsp;·&nbsp; {{ visit.visit_date.strftime('%d %B %Y, %I:%M %p') }}
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary btn-action">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+    <a href="{{ url_for('visit_prescription_pdf', visit_id=visit.id) }}" target="_blank" class="btn btn-primary btn-action">
+      <i class="bi bi-file-earmark-medical-fill"></i> Print Rx
+    </a>
+    <button class="btn btn-outline-danger btn-action" onclick="confirmDeleteVisit()">
+      <i class="bi bi-trash-fill"></i> Delete Visit
+    </button>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Left: Clinical -->
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><h5><i class="bi bi-activity me-2" style="color:var(--primary)"></i>Clinical Details</h5></div>
+      <div class="card-body">
+        <div class="row g-0">
+          <div class="col-6">
+            <div class="detail-field">
+              <div class="field-label">Blood Pressure</div>
+              <div class="field-value" style="font-size:1.3rem;font-weight:700;color:var(--primary);">
+                {{ visit.bp or '—' }}
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="detail-field">
+              <div class="field-label">Weight</div>
+              <div class="field-value" style="font-size:1.3rem;font-weight:700;color:var(--accent);">
+                {{ visit.weight or '—' }}
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="detail-field">
+              <div class="field-label">Chief Complaint</div>
+              <div class="field-value {% if not visit.complaint %}empty{% endif %}">
+                {{ visit.complaint or 'Not recorded' }}
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="detail-field">
+              <div class="field-label">Diagnosis</div>
+              <div class="field-value {% if not visit.diagnosis %}empty{% endif %}">
+                {{ visit.diagnosis or 'Not recorded' }}
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="detail-field">
+              <div class="field-label">Advice & Instructions</div>
+              {% if visit.advice %}
+                <ul style="margin:0;padding-left:1.2rem;line-height:2;">
+                {% for line in visit.advice.strip().split('\n') %}
+                  {% if line.strip() %}
+                  <li style="font-size:0.92rem;">{{ line.strip() }}</li>
+                  {% endif %}
+                {% endfor %}
+                </ul>
+              {% else %}
+                <div class="field-value empty">Not recorded</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Prescriptions -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="bi bi-capsule-pill me-2" style="color:#27ae60"></i>Prescriptions ({{ visit.prescriptions|length }})</h5>
+      </div>
+      {% if visit.prescriptions %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Medicine</th>
+              <th>Dosage</th>
+              <th>Duration</th>
+              <th>Instructions</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rx in visit.prescriptions %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td style="font-weight:600;">{{ rx.medicine_name }}</td>
+              <td><code style="font-size:0.85rem;background:var(--primary-light);padding:2px 6px;border-radius:4px;color:var(--primary);">{{ rx.dosage or '—' }}</code></td>
+              <td>{{ rx.days ~ ' days' if rx.days else '—' }}</td>
+              <td style="color:var(--muted);font-size:0.83rem;">{{ rx.instructions or '—' }}</td>
+              <td>
+                {% if rx.is_active %}
+                  <span style="font-size:0.75rem;font-weight:700;color:#27ae60;background:#e8f5e9;padding:3px 8px;border-radius:12px;">
+                    Active ({{ rx.days_remaining }}d left)
+                  </span>
+                {% elif rx.end_date %}
+                  <span style="font-size:0.75rem;font-weight:700;color:var(--muted);background:#f0f5fa;padding:3px 8px;border-radius:12px;">
+                    Completed
+                  </span>
+                {% else %}
+                  <span style="font-size:0.75rem;color:var(--muted);">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:2rem;">
+        <i class="bi bi-capsule"></i>
+        <p>No prescriptions recorded for this visit.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteVisitModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+      <div class="modal-body text-center p-4">
+        <div style="width:56px;height:56px;background:#fef0ef;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.4rem;color:#c0392b;">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <h5 style="font-weight:700;margin-bottom:.4rem;">Delete This Visit?</h5>
+        <p style="font-size:0.87rem;color:var(--muted);">All prescriptions linked to this visit will also be deleted. This cannot be undone.</p>
+        <div class="d-flex gap-2 justify-content-center mt-3">
+          <button class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+          <form method="POST" action="{{ url_for('delete_visit', visit_id=visit.id) }}">
+            <button type="submit" class="btn btn-danger px-4"><i class="bi bi-trash-fill me-1"></i>Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function confirmDeleteVisit() {
+    new bootstrap.Modal(document.getElementById('deleteVisitModal')).show();
+  }
+</script>
+{% endblock %}

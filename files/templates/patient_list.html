@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}Patient Records{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-people-fill me-2" style="color:var(--primary)"></i>Patient Records</h1>
+    <div class="page-subtitle">
+      {% if search %}
+        Showing results for "<strong>{{ search }}</strong>"
+        &nbsp;·&nbsp; {{ pagination.total }} record(s) found
+      {% else %}
+        All registered patients &nbsp;·&nbsp; {{ pagination.total }} total
+      {% endif %}
+    </div>
+  </div>
+  <a href="{{ url_for('add_patient') }}" class="btn btn-primary btn-action">
+    <i class="bi bi-person-plus-fill"></i> Add Patient
+  </a>
+</div>
+
+<!-- Search Bar -->
+<div class="card mb-3">
+  <div class="card-body" style="padding:1rem 1.25rem;">
+    <form method="GET" action="{{ url_for('patient_list') }}" class="d-flex gap-2 align-items-center">
+      <div class="search-wrap flex-grow-1">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" name="search" class="form-control" style="border-radius:10px;"
+               placeholder="Search by name, mobile, or registration number…"
+               value="{{ search or '' }}" autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary btn-action">
+        <i class="bi bi-search"></i> Search
+      </button>
+      {% if search %}
+      <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary btn-action">
+        <i class="bi bi-x-circle"></i> Clear
+      </a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="card table-card">
+  {% if patients %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Serial No.</th>
+          <th>Reg. Number</th>
+          <th>Patient Name</th>
+          <th>Age / Sex</th>
+          <th>Mobile</th>
+          <th>Chief Complaint</th>
+          <th>Registered</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in patients %}
+        <tr>
+          <td style="color:var(--muted);font-size:0.8rem;">
+            {{ loop.index + (pagination.page - 1) * pagination.per_page }}
+          </td>
+          <td><span class="sn-badge">{{ p.serial_number }}</span></td>
+          <td style="color:var(--muted);font-size:0.82rem;font-family:monospace;">{{ p.registration_number }}</td>
+          <td>
+            <a href="{{ url_for('patient_detail', patient_id=p.id) }}"
+               style="text-decoration:none;color:var(--text);font-weight:600;">
+              {{ p.name }}
+            </a>
+          </td>
+          <td>
+            {{ p.age }} yrs &nbsp;
+            <span class="badge-sex badge-{{ p.sex|lower }}">{{ p.sex }}</span>
+          </td>
+          <td style="font-family:monospace;font-size:0.85rem;">{{ p.mobile }}</td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:0.83rem;">
+            {{ p.complaint or '—' }}
+          </td>
+          <td style="color:var(--muted);font-size:0.83rem;white-space:nowrap;">
+            {{ p.created_at.strftime('%d %b %Y') if p.created_at else '—' }}
+          </td>
+          <td style="text-align:right;white-space:nowrap;">
+            <a href="{{ url_for('patient_detail', patient_id=p.id) }}"
+               class="btn btn-sm btn-outline-primary btn-action me-1" title="View">
+              <i class="bi bi-eye-fill"></i>
+            </a>
+            <a href="{{ url_for('edit_patient', patient_id=p.id) }}"
+               class="btn btn-sm btn-outline-secondary btn-action me-1" title="Edit">
+              <i class="bi bi-pencil-fill"></i>
+            </a>
+            <a href="{{ url_for('prescription_pdf', patient_id=p.id) }}" target="_blank"
+               class="btn btn-sm btn-outline-success btn-action me-1" title="Prescription PDF">
+              <i class="bi bi-file-earmark-medical-fill"></i>
+            </a>
+            <button class="btn btn-sm btn-outline-danger btn-action" title="Delete"
+                    onclick="confirmDelete({{ p.id }}, '{{ p.name }}')">
+              <i class="bi bi-trash-fill"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-top:1px solid var(--border);">
+    <div style="font-size:0.82rem;color:var(--muted);">
+      Showing {{ (pagination.page - 1) * pagination.per_page + 1 }}–{{ [pagination.page * pagination.per_page, pagination.total]|min }} of {{ pagination.total }}
+    </div>
+    <nav>
+      <ul class="pagination mb-0">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('patient_list', page=pagination.prev_num, search=search) }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if page_num %}
+          <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('patient_list', page=page_num, search=search) }}">{{ page_num }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('patient_list', page=pagination.next_num, search=search) }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-person-x-fill"></i>
+    {% if search %}
+      <p>No patients found matching "<strong>{{ search }}</strong>". <a href="{{ url_for('patient_list') }}">Clear search</a>.</p>
+    {% else %}
+      <p>No patients registered yet. <a href="{{ url_for('add_patient') }}">Register the first patient</a>.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+      <div class="modal-body text-center p-4">
+        <div style="width:56px;height:56px;background:#fef0ef;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.4rem;color:#c0392b;">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <h5 style="font-weight:700;color:var(--text);margin-bottom:.4rem;">Delete Patient Record?</h5>
+        <p style="font-size:0.87rem;color:var(--muted);" id="deleteModalText">This action cannot be undone.</p>
+        <div class="d-flex gap-2 justify-content-center mt-3">
+          <button class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+          <form id="deleteForm" method="POST">
+            <button type="submit" class="btn btn-danger px-4">
+              <i class="bi bi-trash-fill me-1"></i> Delete
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function confirmDelete(patientId, patientName) {
+    document.getElementById('deleteModalText').textContent =
+      `Are you sure you want to permanently delete the record for "${patientName}"? This cannot be undone.`;
+    document.getElementById('deleteForm').action = `/patients/${patientId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+  }
+</script>
+{% endblock %}
