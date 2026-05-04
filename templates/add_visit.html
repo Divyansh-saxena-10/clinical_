@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% block title %}Add Visit — {{ patient.name }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">
+      <i class="bi bi-clipboard2-pulse-fill me-2" style="color:var(--primary)"></i>Record New Visit
+    </h1>
+    <div class="page-subtitle">
+      Patient: <strong>{{ patient.name }}</strong> &nbsp;·&nbsp;
+      {{ patient.registration_number }} &nbsp;·&nbsp;
+      {{ patient.age }} yrs / {{ patient.sex }}
+    </div>
+  </div>
+  <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary btn-action">
+    <i class="bi bi-arrow-left"></i> Back to Patient
+  </a>
+</div>
+
+<form method="POST" action="{{ url_for('add_visit', patient_id=patient.id) }}" id="visitForm">
+
+  <!-- ── Clinical Info ── -->
+  <div class="card mb-3">
+    <div class="card-header">
+      <h5><i class="bi bi-activity me-2" style="color:var(--primary)"></i>Clinical Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Blood Pressure</label>
+          <input type="text" name="bp" class="form-control" placeholder="e.g. 120/80" maxlength="20">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Weight</label>
+          <input type="text" name="weight" class="form-control" placeholder="e.g. 70 kg" maxlength="20">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Chief Complaint <span style="color:#c0392b">*</span></label>
+          <input type="text" name="complaint" class="form-control"
+                 placeholder="Primary symptom or reason for visit" maxlength="500">
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Diagnosis</label>
+          <input type="text" name="diagnosis" class="form-control"
+                 placeholder="Doctor's clinical diagnosis" maxlength="500">
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Advice & Instructions</label>
+          <textarea name="advice" class="form-control" rows="2"
+                    placeholder="e.g. Rest for 3 days, drink plenty of fluids, follow-up after 1 week"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Prescription ── -->
+  <div class="card mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <h5><i class="bi bi-capsule-pill me-2" style="color:#27ae60"></i>Prescription</h5>
+      <button type="button" class="btn btn-sm btn-outline-primary btn-action" id="addRxRow">
+        <i class="bi bi-plus-circle"></i> Add Row
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table mb-0" id="rxTable">
+          <thead style="background:var(--primary-light);">
+            <tr>
+              <th style="width:35%;padding:10px 12px;font-size:0.78rem;color:var(--muted);font-weight:700;">Medicine Name</th>
+              <th style="width:13%;padding:10px 12px;font-size:0.78rem;color:var(--muted);font-weight:700;">Dosage</th>
+              <th style="width:10%;padding:10px 12px;font-size:0.78rem;color:var(--muted);font-weight:700;">Days</th>
+              <th style="width:30%;padding:10px 12px;font-size:0.78rem;color:var(--muted);font-weight:700;">Instructions</th>
+              <th style="width:5%;padding:10px 12px;"></th>
+            </tr>
+          </thead>
+          <tbody id="rxBody">
+            {% for i in range(1, 7) %}
+            <tr class="rx-row" style="background:{% if i % 2 == 0 %}#f9fdff{% else %}white{% endif %};">
+              <td style="padding:8px 12px;">
+                <input type="text" name="medicine_name[]" class="form-control form-control-sm"
+                       placeholder="e.g. Tab. Paracetamol 500mg">
+              </td>
+              <td style="padding:8px 12px;">
+                <input type="text" name="dosage[]" class="form-control form-control-sm" placeholder="1-0-1">
+              </td>
+              <td style="padding:8px 12px;">
+                <input type="number" name="days[]" class="form-control form-control-sm"
+                       placeholder="5" min="1" max="365">
+              </td>
+              <td style="padding:8px 12px;">
+                <input type="text" name="instructions[]" class="form-control form-control-sm"
+                       placeholder="After meals">
+              </td>
+              <td style="padding:8px 12px;">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-rx" title="Remove">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3 pt-1">
+        <small class="text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Dosage: <code>1-0-1</code> = Morning-Afternoon-Night. Empty rows ignored.
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Billing ── -->
+  <div class="card mb-3">
+    <div class="card-header">
+      <h5><i class="bi bi-receipt me-2" style="color:var(--primary)"></i>Billing (Optional)</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Consultation Fee (₹)</label>
+          <input type="number" name="consultation_fee" id="fee1" class="form-control bill-input"
+                 placeholder="0" min="0" step="1" value="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Medicine Cost (₹)</label>
+          <input type="number" name="medicine_cost" id="fee2" class="form-control bill-input"
+                 placeholder="0" min="0" step="1" value="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Other Charges (₹)</label>
+          <input type="number" name="other_charges" id="fee3" class="form-control bill-input"
+                 placeholder="0" min="0" step="1" value="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Total</label>
+          <div style="background:var(--primary-light);border-radius:10px;padding:9px 14px;font-size:1.3rem;font-weight:700;color:var(--primary);border:1px solid var(--border);">
+            ₹<span id="totalDisplay">0</span>
+          </div>
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Bill Notes</label>
+          <input type="text" name="bill_notes" class="form-control"
+                 placeholder="Optional billing notes">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Submit ── -->
+  <div class="d-flex gap-3">
+    <button type="submit" class="btn btn-primary btn-action px-4">
+      <i class="bi bi-check2-circle"></i> Save Visit
+    </button>
+    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary btn-action">
+      <i class="bi bi-x-circle"></i> Cancel
+    </a>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Add new prescription row
+  document.getElementById('addRxRow').addEventListener('click', function() {
+    const tbody = document.getElementById('rxBody');
+    const rowCount = tbody.querySelectorAll('tr').length;
+    const bg = rowCount % 2 === 0 ? 'white' : '#f9fdff';
+    const row = `
+      <tr class="rx-row" style="background:${bg};">
+        <td style="padding:8px 12px;"><input type="text" name="medicine_name[]" class="form-control form-control-sm" placeholder="e.g. Tab. Amoxicillin 500mg"></td>
+        <td style="padding:8px 12px;"><input type="text" name="dosage[]" class="form-control form-control-sm" placeholder="1-1-1"></td>
+        <td style="padding:8px 12px;"><input type="number" name="days[]" class="form-control form-control-sm" placeholder="5" min="1" max="365"></td>
+        <td style="padding:8px 12px;"><input type="text" name="instructions[]" class="form-control form-control-sm" placeholder="Before meals"></td>
+        <td style="padding:8px 12px;"><button type="button" class="btn btn-sm btn-outline-danger remove-rx"><i class="bi bi-trash"></i></button></td>
+      </tr>`;
+    tbody.insertAdjacentHTML('beforeend', row);
+  });
+
+  // Remove prescription row
+  document.getElementById('rxBody').addEventListener('click', function(e) {
+    const btn = e.target.closest('.remove-rx');
+    if (btn) {
+      const rows = document.querySelectorAll('.rx-row');
+      if (rows.length > 1) {
+        btn.closest('tr').remove();
+      } else {
+        btn.closest('tr').querySelectorAll('input').forEach(i => i.value = '');
+      }
+    }
+  });
+
+  // Live billing total
+  function updateTotal() {
+    const f1 = parseFloat(document.getElementById('fee1').value) || 0;
+    const f2 = parseFloat(document.getElementById('fee2').value) || 0;
+    const f3 = parseFloat(document.getElementById('fee3').value) || 0;
+    document.getElementById('totalDisplay').textContent = (f1 + f2 + f3).toFixed(0);
+  }
+  document.querySelectorAll('.bill-input').forEach(el => el.addEventListener('input', updateTotal));
+</script>
+{% endblock %}

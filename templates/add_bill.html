@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Create Bill — {{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-receipt me-2" style="color:var(--primary)"></i>Create Bill</h1>
+    <div class="page-subtitle">Patient: <strong>{{ patient.name }}</strong> &nbsp;·&nbsp; {{ patient.registration_number }}</div>
+  </div>
+  <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary btn-action">
+    <i class="bi bi-arrow-left"></i> Back to Patient
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="bi bi-cash-stack me-2" style="color:var(--primary)"></i>Bill Details</h5>
+      </div>
+      <div class="card-body" style="padding:2rem;">
+        <form method="POST" action="{{ url_for('add_bill', patient_id=patient.id) }}" id="billForm">
+
+          {% if visits %}
+          <div class="mb-3">
+            <label class="form-label">Link to Visit (Optional)</label>
+            <select name="visit_id" class="form-select">
+              <option value="">— Not linked to a specific visit —</option>
+              {% for v in visits %}
+              <option value="{{ v.id }}">
+                {{ v.visit_date.strftime('%d %b %Y') }} — {{ v.complaint or 'No complaint noted' }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}
+          <input type="hidden" name="visit_id" value="">
+          {% endif %}
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Consultation Fee (₹)</label>
+              <input type="number" name="consultation_fee" id="fee1" class="form-control bill-input"
+                     placeholder="0.00" min="0" step="0.01" value="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Medicine Cost (₹)</label>
+              <input type="number" name="medicine_cost" id="fee2" class="form-control bill-input"
+                     placeholder="0.00" min="0" step="0.01" value="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Other Charges (₹)</label>
+              <input type="number" name="other_charges" id="fee3" class="form-control bill-input"
+                     placeholder="0.00" min="0" step="0.01" value="0">
+            </div>
+          </div>
+
+          <!-- Total display -->
+          <div style="background:var(--primary-light);border-radius:12px;padding:1.2rem;text-align:center;margin-bottom:1.5rem;">
+            <div style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Total Amount</div>
+            <div id="totalDisplay" style="font-size:2.2rem;font-weight:700;color:var(--primary);">₹0.00</div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="Any additional notes or remarks..."></textarea>
+          </div>
+
+          <div class="d-flex gap-3">
+            <button type="submit" class="btn btn-primary btn-action px-4">
+              <i class="bi bi-receipt"></i> Create Bill
+            </button>
+            <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary btn-action">
+              Cancel
+            </a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function updateTotal() {
+    const f1 = parseFloat(document.getElementById('fee1').value) || 0;
+    const f2 = parseFloat(document.getElementById('fee2').value) || 0;
+    const f3 = parseFloat(document.getElementById('fee3').value) || 0;
+    document.getElementById('totalDisplay').textContent = '₹' + (f1 + f2 + f3).toFixed(2);
+  }
+  document.querySelectorAll('.bill-input').forEach(el => el.addEventListener('input', updateTotal));
+</script>
+{% endblock %}

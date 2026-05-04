@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <div class="page-subtitle">{{ today }} &nbsp;·&nbsp; {{ clinic_name }}</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('export_csv') }}" class="btn btn-outline-secondary btn-action">
+      <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+    </a>
+    <a href="{{ url_for('add_patient') }}" class="btn btn-primary btn-action">
+      <i class="bi bi-person-plus-fill"></i> Add New Patient
+    </a>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ total_patients }}</div>
+        <div class="stat-label">Total Patients</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="bi bi-calendar-check-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ today_patients }}</div>
+        <div class="stat-label">Today's Patients</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon yellow"><i class="bi bi-clipboard2-pulse-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ total_visits }}</div>
+        <div class="stat-label">Total Visits</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0e8ff;color:#6f42c1;"><i class="bi bi-clock-history"></i></div>
+      <div>
+        <div class="stat-value">{{ recent_patients|length }}</div>
+        <div class="stat-label">Recent Records</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body d-flex align-items-center gap-3 flex-wrap" style="padding:1.1rem 1.5rem;">
+        <span style="font-size:0.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Quick Actions</span>
+        <a href="{{ url_for('add_patient') }}" class="btn btn-primary btn-sm btn-action">
+          <i class="bi bi-person-plus-fill"></i> Register Patient
+        </a>
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-primary btn-sm btn-action">
+          <i class="bi bi-people-fill"></i> View All Patients
+        </a>
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary btn-sm btn-action">
+          <i class="bi bi-search"></i> Search Records
+        </a>
+        <a href="{{ url_for('export_csv') }}" class="btn btn-outline-secondary btn-sm btn-action">
+          <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+        </a>
+        <a href="{{ url_for('change_password') }}" class="btn btn-outline-secondary btn-sm btn-action ms-auto">
+          <i class="bi bi-shield-lock"></i> Change Password
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Patients Table -->
+<div class="card table-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h5><i class="bi bi-clock-history me-2" style="color:var(--primary)"></i>Recent Patients</h5>
+    <a href="{{ url_for('patient_list') }}" class="btn btn-sm btn-outline-primary btn-action">
+      <i class="bi bi-grid-3x3-gap"></i> View All
+    </a>
+  </div>
+
+  {% if recent_patients %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Serial No.</th>
+          <th>Reg. Number</th>
+          <th>Patient Name</th>
+          <th>Age / Sex</th>
+          <th>Mobile</th>
+          <th>Visits</th>
+          <th>Registered</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent_patients %}
+        <tr>
+          <td><span class="sn-badge">{{ p.serial_number }}</span></td>
+          <td style="color:var(--muted);font-size:0.82rem;">{{ p.registration_number }}</td>
+          <td style="font-weight:600;">{{ p.name }}</td>
+          <td>
+            {{ p.age }} yrs &nbsp;
+            <span class="badge-sex badge-{{ p.sex|lower }}">{{ p.sex }}</span>
+          </td>
+          <td style="font-family:monospace;font-size:0.85rem;">{{ p.mobile }}</td>
+          <td>
+            <span style="font-size:0.78rem;font-weight:700;color:var(--accent);background:var(--accent-light);padding:2px 8px;border-radius:10px;">
+              {{ p.visits|length }}
+            </span>
+          </td>
+          <td style="color:var(--muted);font-size:0.83rem;">
+            {{ p.created_at.strftime('%d %b %Y') if p.created_at else '—' }}
+          </td>
+          <td style="text-align:right;">
+            <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="btn btn-sm btn-outline-primary btn-action me-1">
+              <i class="bi bi-eye-fill"></i> View
+            </a>
+            <a href="{{ url_for('prescription_pdf', patient_id=p.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary btn-action">
+              <i class="bi bi-file-earmark-medical"></i> Rx
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-people"></i>
+    <p>No patients registered yet. <a href="{{ url_for('add_patient') }}">Add the first patient</a>.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
